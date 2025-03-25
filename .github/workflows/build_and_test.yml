@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  segyio_version: '1.9.13'
+
 jobs:
   build:
     name: C++, FFTW ${{ matrix.fftw }}
@@ -24,21 +27,27 @@ jobs:
 
     - name: Build and install segyio
       run: |
-        git clone --branch v1.9.12 https://github.com/equinor/segyio.git
+        git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
         cd segyio
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_PYTHON=OFF -DEXPERIMENTAL=ON -DBUILD_TESTING=OFF -DBUILD_BIN=OFF
-        make
+        cmake .. -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=ON \
+          -DBUILD_PYTHON=OFF \
+          -DEXPERIMENTAL=ON \
+          -DBUILD_TESTING=OFF \
+          -DBUILD_BIN=OFF
+        make -j
         sudo make install
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-      
+        cache: 'pip'
+
     - name: Install Python dependencies
-      run: pip install 'segyio==1.9.12'
+      run: pip install "segyio==${{ env.segyio_version }}"
 
     - name: Build and test
       run: |
