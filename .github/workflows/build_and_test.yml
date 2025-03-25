@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
 
     - name: Install dependencies
       run: |
@@ -54,6 +56,7 @@ jobs:
         mkdir build
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_PYTHON=ON \
               -DUSE_FFTW=${{ matrix.fftw }} \
               ..
         make -j
@@ -117,15 +120,69 @@ jobs:
         python -m pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo segyio
         echo PATH=${PATH} >> $GITHUB_ENV
 
-    - name: Build and test
+    - name: Build and test (C++)
       run: |
         python --version
         which python
         mkdir build
         pushd build
         source scl_source enable gcc-toolset-13 && cmake -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_PYTHON=ON \
               -DUSE_FFTW=${{ matrix.fftw }} \
               ..
         scl enable gcc-toolset-13 "make -j"
         ctest --output-on-failure
         make diff
+
+    - name: Build using pip (Python)
+      run: |
+        python --version
+        which python
+        source scl_source enable gcc-toolset-13 && python -m pip install \
+          -Ccmake.define.CMAKE_BUILD_TYPE=Debug \
+          -Ccmake.define.USE_FFTW=${{ matrix.fftw }} \
+          . --verbose
+
+    - name: Test (Python)
+      run: |
+        cd python
+        python -m pytest --memray tests/
+
+  build-python:
+    name: Python bindings, FFTW ${{ matrix.fftw }}
+    strategy:
+      matrix:
+        fftw: ["ON", "OFF"]
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential \
+          libeigen3-dev libfftw3-dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Python dependencies
+      run: pip install pytest pytest-memray xtgeo segyio
+
+    - name: Build
+      run: |
+        pip install \
+          -Ccmake.define.CMAKE_BUILD_TYPE=Debug \
+          -Ccmake.define.USE_FFTW=${{ matrix.fftw }} \
+          . --verbose
+
+    - name: Test
+      run: |
+        cd python
+        python -m pytest --memray tests/
