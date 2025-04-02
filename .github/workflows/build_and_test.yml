@@ -2,7 +2,7 @@ name: Build and Test
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -76,12 +76,15 @@ jobs:
         dnf -y install dnf-plugins-core
         dnf -y config-manager --set-enabled powertools
         dnf -y group install 'Development Tools'
-        dnf -y install fftw3-devel gcc-toolset-13 eigen3-devel cmake wget python3.11 python3.11-devel
+        dnf -y install fftw3-devel gcc-toolset-13 eigen3-devel cmake wget python3.11
 
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
+    # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
+    # default. We use Boost 1.79.0 to reproduce the Travis built being used
+    # earlier for testing and releasing.
     - name: Install Boost
       run: |
         wget https://archives.boost.io/release/1.79.0/source/boost_1_79_0.tar.gz
@@ -104,6 +107,8 @@ jobs:
         scl enable gcc-toolset-13 "make -j"
         scl enable gcc-toolset-13 "make install"
 
+    # This patch should be needed anymore in upcoming releases of segyio and
+    # should be removed in this case.
     - name: Patch segyio experimental header
       run: |
           sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
@@ -114,7 +119,7 @@ jobs:
         source venv/bin/activate
         python -m ensurepip --upgrade
         python -m pip install --upgrade pip
-        python -m pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo segyio
+        python -m pip install "segyio==${{ env.segyio_version }}"
         echo PATH=${PATH} >> $GITHUB_ENV
 
     - name: Build and test
