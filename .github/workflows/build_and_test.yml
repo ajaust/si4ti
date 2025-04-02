@@ -102,6 +102,9 @@ jobs:
         popd
         rm -rf boost_1_79_0
 
+    # segyio is installed from source in this step and using pip in following
+    # step. For the reasoning, check the comment in the job that runs the tests
+    # on Ubuntu (see above).
     - name: Build and install segyio
       run: |
         git clone --branch v${{ env.segyio_version }} https://github.com/equinor/segyio.git
