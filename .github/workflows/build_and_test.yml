@@ -121,7 +121,7 @@ jobs:
         source venv/bin/activate
         python -m ensurepip --upgrade
         python -m pip install --upgrade pip
-        python -m pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo segyio
+        python -m pip install "segyio==${{ env.segyio_version }}"
         echo PATH=${PATH} >> $GITHUB_ENV
 
     - name: Build and test
