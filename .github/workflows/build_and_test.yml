@@ -25,6 +25,12 @@ jobs:
         sudo apt-get install -y cmake build-essential \
           libboost-dev libeigen3-dev libfftw3-dev
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
     - name: Build and install segyio
       run: |
         git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
@@ -39,15 +45,6 @@ jobs:
           -DBUILD_BIN=OFF
         make -j
         sudo make install
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-
-    - name: Install Python dependencies
-      run: pip install "segyio==${{ env.segyio_version }}"
 
     - name: Build and test
       run: |
@@ -97,6 +94,12 @@ jobs:
         popd
         rm -rf boost_1_79_0
 
+    - name: Install Python dependencies
+      run: |
+        python3.11 -m venv venv
+        source venv/bin/activate
+        echo PATH=${PATH} >> $GITHUB_ENV
+
     - name: Build and install segyio
       run: |
         git clone --branch v${{ env.segyio_version }} https://github.com/equinor/segyio.git
@@ -112,15 +115,6 @@ jobs:
     - name: Patch segyio experimental header
       run: |
           sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
-
-    - name: Install Python dependencies
-      run: |
-        python3.11 -m venv venv
-        source venv/bin/activate
-        python -m ensurepip --upgrade
-        python -m pip install --upgrade pip
-        python -m pip install "segyio==${{ env.segyio_version }}"
-        echo PATH=${PATH} >> $GITHUB_ENV
 
     - name: Build and test
       run: |
