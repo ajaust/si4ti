@@ -43,7 +43,6 @@ target_link_libraries(tests catch2
                             Eigen3::Eigen
                             segyio::segyio
                             OpenMP::OpenMP_CXX
-                            Boost::boost
 )
 
 if(USE_FFTW)
