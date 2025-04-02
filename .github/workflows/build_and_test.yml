@@ -93,7 +93,7 @@ jobs:
         popd
         rm -rf boost_1_79_0
 
-    - name: Install Python dependencies
+    - name: Set up Python
       run: |
         python3.11 -m venv venv
         source venv/bin/activate
