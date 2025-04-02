@@ -23,7 +23,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake build-essential \
-          libboost-dev libeigen3-dev libfftw3-dev python-dev
+          libboost-dev libeigen3-dev libfftw3-dev
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -96,7 +96,7 @@ jobs:
         popd
         rm -rf boost_1_79_0
 
-    - name: Set up Python
+    - name: Set up Python and install Python dependencies
       run: |
         python3.11 -m venv venv
         source venv/bin/activate
