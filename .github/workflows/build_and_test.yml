@@ -33,6 +33,10 @@ jobs:
     - name: Install Python dependencies
       run: pip install scikit-build
 
+    - name: Print CMake version
+      run: |
+        cmake --version
+
     - name: Build and install segyio
       run: |
         git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
