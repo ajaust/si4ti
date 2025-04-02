@@ -107,6 +107,10 @@ jobs:
         scl enable gcc-toolset-13 "make -j"
         scl enable gcc-toolset-13 "make install"
 
+    # We need to patch the segyio header to find some integer definitions on
+    # Fedora and Red Hat Enterprise Linux compatible distributions.
+    #
+    # TODO: Remove this step once a new segyio release fixes this issue.
     - name: Patch segyio experimental header
       run: |
           sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
