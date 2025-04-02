@@ -25,6 +25,10 @@ jobs:
         sudo apt-get install -y cmake build-essential \
           libboost-dev libeigen3-dev libfftw3-dev
 
+    # This installation of segyio is used to generate the experimental C++
+    # headers needed to build si4ti. The Python interface is not build to
+    # simplify the build prcoess. The Python interface is instead installed via
+    # pip (see below).
     - name: Build and install segyio
       run: |
         git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
@@ -46,7 +50,8 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
 
-    - name: Install Python dependencies
+    # This installation of segyio is used within the tests run by `make diff`.
+    - name: Install Python dependencies for tests
       run: pip install "segyio==${{ env.segyio_version }}"
 
     - name: Build and test
@@ -115,7 +120,7 @@ jobs:
       run: |
           sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
 
-    - name: Install Python dependencies
+    - name: Install Python dependencies for tests
       run: |
         python3.11 -m venv venv
         source venv/bin/activate
