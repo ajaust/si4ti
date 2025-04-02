@@ -55,7 +55,6 @@ jobs:
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -DUSE_FFTW=ON \
               ..
-        make -j
 
     - name: Run cppcheck
       working-directory: build
