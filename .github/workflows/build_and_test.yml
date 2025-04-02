@@ -30,6 +30,9 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Install Python dependencies
+      run: pip install scikit-build
+
     - name: Build and install segyio
       run: |
         git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
@@ -97,6 +100,10 @@ jobs:
       run: |
         python3.11 -m venv venv
         source venv/bin/activate
+        source venv/bin/activate
+        python -m ensurepip --upgrade
+        python -m pip install --upgrade pip
+        python -m pip install scikit-build
         echo PATH=${PATH} >> $GITHUB_ENV
 
     - name: Build and install segyio
