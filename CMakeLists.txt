@@ -14,6 +14,7 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 find_package(segyio REQUIRED)
 find_library(fftw3 NAMES fftw3 REQUIRED)
 find_library(fftw3f NAMES fftw3f REQUIRED)
+# The FFTW3 header is required by Eigen3 if `USE_FFTW` is enabled.
 find_path(fftw3_includes NAMES "fftw3.h" REQUIRED)
 
 option(BUILD_DOC "Build documentation" OFF)
