@@ -49,7 +49,7 @@ jobs:
         cache: 'pip'
 
     - name: Install Python dependencies
-      run: pip install "segyio==${{ env.segyio_version }}"
+      run: pip install "segyio==${{ env.segyio_version }}" xtgeo numpy pytest pytest-memray
 
     - name: Build and test
       run: |
@@ -62,6 +62,14 @@ jobs:
         make -j
         ctest --output-on-failure
         make diff
+        make install
+
+
+    - name: Test Python buildings (build via CMake)
+      run: |
+        cd python
+        pytest tests
+
 
   # Compatibility with Red Hat Enterprise Linux 8
   build-almalinux-8:
