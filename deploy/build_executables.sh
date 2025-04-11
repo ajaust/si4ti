@@ -2,7 +2,7 @@
 
 for target_arch in "x86-64" "skylake" "x86-64-v3";
 do
-	echo "Building target for ${target_arch}"
+	echo "Building for target: ${target_arch}"
 	mkdir "build-${target_arch}"
 	pushd "build-${target_arch}"
 	source scl_source enable gcc-toolset-13 && cmake -DCMAKE_BUILD_TYPE=Release \
