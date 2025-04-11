@@ -160,7 +160,7 @@ jobs:
 #          packages-dir: ./wheelhouse/
 
   build_executables:
-    needs: [wheels, sdist]
+    #needs: [wheels, sdist]
     strategy:
       matrix:
         target_arch: [ "generic", "skylake", "x86-64-v3" ]
@@ -213,7 +213,7 @@ jobs:
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_PYTHON=ON \
-              -DCMAKE_INSTALL_PREFIX=/opt/${{ matrix.target_arch }} \
+              -DCMAKE_INSTALL_PREFIX=/opt/si4ti \
               -DUSE_FFTW=${{ matrix.fftw }} \
               ..
         make -j
