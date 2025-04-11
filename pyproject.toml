@@ -55,8 +55,6 @@ wheel.install-dir = "si4ti"
 
 sdist.exclude = [
   ".github/",
-  "travis/",
-  "travis.yml",
 ]
 
 [tool.scikit-build.cmake.define]
