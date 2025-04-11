@@ -161,70 +161,79 @@ jobs:
 
   build_executables:
     #needs: [wheels, sdist]
-    strategy:
-      matrix:
-        target_arch: [ "x86-64", "skylake", "x86-64-v3" ]
     runs-on: ubuntu-latest
+    container:
+      image: almalinux:8
     steps:
+    - name: Install dependencies
+      run: |
+        dnf -y update
+        dnf -y install dnf-plugins-core
+        dnf -y config-manager --set-enabled powertools
+        dnf -y group install 'Development Tools'
+        dnf -y install fftw3-devel gcc-toolset-13 eigen3-devel cmake wget python3.11 python3.11-devel
+
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
-    - name: Install dependencies
+    # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
+    # default. We use Boost 1.79.0 to reproduce the Travis build being used
+    # earlier for testing and releasing.
+    - name: Install Boost
       run: |
-        sudo apt-get update
-        sudo apt-get install -y cmake build-essential \
-          libboost-dev libeigen3-dev
+        wget https://archives.boost.io/release/1.79.0/source/boost_1_79_0.tar.gz
+        ls -l
+        tar xf boost_1_79_0.tar.gz
+        pushd boost_1_79_0
+        scl enable gcc-toolset-13 "./bootstrap.sh --with-libraries=math"
+        scl enable gcc-toolset-13 "./b2 -j 2"
+        scl enable gcc-toolset-13 "./b2 install"
+        popd
+        rm -rf boost_1_79_0
 
-    # This installation of segyio is used to generate the experimental C++
-    # headers needed to build si4ti. The Python interface is not build to
-    # simplify the build process. The Python interface is instead installed via
-    # pip (see below).
+    # segyio is installed from source in this step and using pip in following
+    # step. For the reasoning, check the comment in the job that runs the tests
+    # on Ubuntu (see above).
     - name: Build and install segyio
       run: |
-        git clone --branch "v${{ env.segyio_version }}" https://github.com/equinor/segyio.git
+        git clone --branch v${{ env.segyio_version }} https://github.com/equinor/segyio.git
         cd segyio
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_SHARED_LIBS=ON \
-          -DBUILD_PYTHON=OFF \
-          -DEXPERIMENTAL=ON \
-          -DBUILD_TESTING=OFF \
-          -DBUILD_BIN=OFF
-        make -j
-        sudo make install
+        scl enable gcc-toolset-13 "cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_PYTHON=OFF -DEXPERIMENTAL=ON -DBUILD_TESTING=OFF -DBUILD_BIN=OFF"
+        scl enable gcc-toolset-13 "make -j"
+        scl enable gcc-toolset-13 "make install"
+        #
+    # We need to patch the segyio header to find some integer definitions on
+    # Fedora and Red Hat Enterprise Linux compatible distributions.
+    #
+    # TODO: Remove this step once a new segyio release fixes this issue.
+    - name: Patch segyio experimental header
+      run: |
+          sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+    - name: Install Python dependencies
+      run: |
+        python3.11 -m venv venv
+        source venv/bin/activate
+        python -m ensurepip --upgrade
+        python -m pip install --upgrade pip
+        python -m pip install "segyio==${{ env.segyio_version }}"
+        echo PATH=${PATH} >> $GITHUB_ENV
 
     # This installation of segyio is used within the tests run by `make diff`.
     - name: Install Python dependencies for tests
       run: pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo
 
-    - name: "Build, test, and install (CMake, target architecture: ${{ matrix.target_arch }})"
-      env:
-        CXXFLAGS: -march=${{ matrix.target_arch }}
+    - name: Build, test, and install (CMake)
       run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_PYTHON=OFF \
-              -DCMAKE_INSTALL_PREFIX=/opt/${{ matrix.target_arch }} \
-              -DUSE_FFTW=OFF \
-              ..
-        make -j
-        ctest --output-on-failure
-        make diff
-        sudo make install
+        scl enable gcc-toolset-13 "./deploy/build_executables.sh"
 
     - uses: actions/upload-artifact@v4
       with:
-        name: arch-${{ matrix.target_arch }}
-        path: /opt/${{ matrix.target_arch }}/
+        name: si4ti-rhel8-executables
+        path: /opt/si4ti-rhel8-*
         # We do not need to keep the artifacts for long because they are
         # supposed to be pushed to PyPI.
         retention-days: 7
