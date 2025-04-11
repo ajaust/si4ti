@@ -10,9 +10,6 @@ using namespace segyio::literals;
 #include "matrices.hpp"
 #include "matchers.hpp"
 
-int Progress::count = 0;
-int Progress::expected = 100000; // Set high to avoid progress printouts
-
 TEST_CASE("Regression test") {
 
     SECTION("BSpline") {
@@ -66,11 +63,11 @@ TEST_CASE("Regression test") {
 
     auto vint1 = vintage1();
     const auto omega = angular_frequency( 30, 1.0 );
-    const auto derived1 = derive( vint1, omega );
+    derive( vint1, omega );
 
     SECTION("Derive") {
         const auto expected = derived();
-        const auto result = derived1;
+        const auto result = vint1;
 
         CHECK( result.isApprox(expected, 1e-5) );
     }
@@ -79,7 +76,7 @@ TEST_CASE("Regression test") {
 
     SECTION("Linear operator") {
         const auto expected = linearoperator();
-        const auto result = linearoperator(derived1, spline);
+        const auto result = linearoperator(vint1, spline);
 
         CHECK( expected.rows() == result.rows() );
         CHECK( expected.cols() == result.cols() );
@@ -90,8 +87,8 @@ TEST_CASE("Regression test") {
     SECTION("Solution") {
         auto vint2 = vintage2();
         const Eigen::Matrix<double, -1, 1> delta = vint2 - vint1;
-        const auto derived2 = derive( vint2, omega );
-        vector<double> derived = ( derived1 + derived2 ) / 2;
+        derive( vint2, omega );
+        vector<double> derived = ( vint1 + vint2 ) / 2;
 
         const auto expected = solution();
         const auto result = solution( derived, delta, spline );
@@ -470,7 +467,7 @@ SCENARIO("Preconditioning") {
 
 
         WHEN("Preconditioning the system M * x") {
-        THEN("2 vintage preconditioner should compute excact result") {
+        THEN("2 vintage preconditioner should compute exact result") {
 
             Eigen::VectorXd x( 10 );
             x << 1,2,3,4,5,6,7,8,9,10;
@@ -492,7 +489,7 @@ SCENARIO("Preconditioning") {
         }}
 
         WHEN("Preconditioning the system [ M, 0; 0, 2*M ] * x") {
-        THEN("3 vintage preconditioner should compute excact result") {
+        THEN("3 vintage preconditioner should compute exact result") {
             Eigen::VectorXd x( 20 );
             x << 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20;
 
@@ -531,12 +528,12 @@ SCENARIO( "Infer sampling interval ") {
                      segyio::config{}.with( segyio::ilbyte{ 5 } )
                                      .with( segyio::xlbyte{ 21 } ) );
 
-    GIVEN( "the sampling interval is user-spesified" ) {
+    GIVEN( "the sampling interval is user-specified" ) {
         sampling_interval = infer_interval( f, 5.0 );
         CHECK(sampling_interval == 5.0 );
     }
 
-    GIVEN( "the sampling interval is not user spesified" ) {
+    GIVEN( "the sampling interval is not user specified" ) {
         sampling_interval = infer_interval( f, 0.0 );;
         CHECK(sampling_interval == 4.0 );
     }

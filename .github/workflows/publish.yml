@@ -1,0 +1,239 @@
+name: Wheels
+
+env:
+  segyio_version: '1.9.13'
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - '*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build_executables:
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:8
+    steps:
+    - name: Install dependencies
+      run: |
+        dnf -y update
+        dnf -y install dnf-plugins-core
+        dnf -y config-manager --set-enabled powertools
+        dnf -y group install 'Development Tools'
+        dnf -y install fftw3-devel gcc-toolset-13 eigen3-devel cmake wget python3.11 python3.11-devel
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
+    # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
+    # default. We use Boost 1.79.0 to reproduce the Travis build being used
+    # earlier for testing and releasing.
+    - name: Install Boost
+      run: |
+        wget https://archives.boost.io/release/1.79.0/source/boost_1_79_0.tar.gz
+        ls -l
+        tar xf boost_1_79_0.tar.gz
+        pushd boost_1_79_0
+        scl enable gcc-toolset-13 "./bootstrap.sh --with-libraries=math"
+        scl enable gcc-toolset-13 "./b2 -j 2"
+        scl enable gcc-toolset-13 "./b2 install"
+        popd
+        rm -rf boost_1_79_0
+
+    # segyio is installed from source in this step and using pip in following
+    # step. For the reasoning, check the comment in the job that runs the tests
+    # on Ubuntu (see above).
+    - name: Build and install segyio
+      run: |
+        git clone --branch v${{ env.segyio_version }} https://github.com/equinor/segyio.git
+        cd segyio
+        mkdir build
+        cd build
+        scl enable gcc-toolset-13 "cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_PYTHON=OFF -DEXPERIMENTAL=ON -DBUILD_TESTING=OFF -DBUILD_BIN=OFF"
+        scl enable gcc-toolset-13 "make -j"
+        scl enable gcc-toolset-13 "make install"
+        #
+    # We need to patch the segyio header to find some integer definitions on
+    # Fedora and Red Hat Enterprise Linux compatible distributions.
+    #
+    # TODO: Remove this step once a new segyio release fixes this issue.
+    - name: Patch segyio experimental header
+      run: |
+          sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
+
+    - name: Install Python dependencies
+      run: |
+        python3.11 -m venv venv
+        source venv/bin/activate
+        python -m ensurepip --upgrade
+        python -m pip install --upgrade pip
+        python -m pip install "segyio==${{ env.segyio_version }}"
+        echo PATH=${PATH} >> $GITHUB_ENV
+
+    # This installation of segyio is used within the tests run by `make diff`.
+    - name: Install Python dependencies for tests
+      run: pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo
+
+    - name: Build, test, and install (CMake)
+      run: |
+        scl enable gcc-toolset-13 "./deploy/build_executables.sh"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: si4ti-rhel8-executables
+        path: /opt/si4ti-rhel8-*
+        # We do not need to keep the artifacts for long because they are
+        # supposed to be pushed to PyPI.
+        retention-days: 7
+
+  wheels:
+    needs: [build_executables]
+    name: Build wheels on ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            cxx_flags: '-march=x86-64-v3'
+          - os: macos-13
+            arch: x86_64
+            macos_target: '13.0'
+            cxx_flags: '-march=x86-64-v3'
+          - os: macos-latest
+            arch: arm64
+            macos_target: '14.0'
+            # It is unclear if there is any target specific optimisation that
+            # we can choose here that is better than what the compiler chooses
+            # by default. Therefore, we don't specify anything for arm64.
+            cxx_flags:
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
+      # Minimum supported macOS version set to 13.0 (amd64) and 14.0 (arm64)
+      # due to OpenMP installed via Homebrew requiring rather new MacOS
+      # versions. If we want to support older platforms, we would need to build
+      # our own OpenMP library from source.
+      - name: Set MacOS deployment target
+        if: ${{ startsWith(matrix.os, 'macos') }}
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_target }}" >> $GITHUB_ENV
+      - name: Build wheels
+        # Majority of cibuildhweel configuration is done via pyproject.toml,
+        # but for options specific to a MacOS target platform, i.e., an option
+        # different for arm64 than for x86_64, it is easiest to set them in the
+        # workflow file.
+        env:
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CXXFLAGS: ${{ matrix.cxx_flags }}
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.os }}-${{ matrix.arch }}
+          path: ./wheelhouse/*.whl
+          # We do not need to keep the artifacts for long because they are
+          # supposed to be pushed to PyPI.
+          retention-days: 7
+
+  # Building source distribution
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install build
+        run: python -m pip install build
+
+      - name: Build source distribution
+        run: |
+          python -m build --sdist
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libboost-dev \
+            libeigen3-dev libfftw3-dev
+
+      - name: Install and test sdist (FFTW off)
+        run: |
+          python -m venv venv-fftw-off
+          source venv-fftw-off/bin/activate
+          pip install --upgrade pip
+          pip install pytest pytest-memray xtgeo segyio
+          pip install -Ccmake.define.USE_FFTW=OFF $(ls dist/*) --verbose
+          cd python
+          python -m pytest --memray tests/
+
+      - name: Install and test sdist (FFTW on)
+        run: |
+          python -m venv venv-fftw-on
+          source venv-fftw-on/bin/activate
+          pip install --upgrade pip
+          pip install pytest pytest-memray xtgeo segyio
+          pip install -Ccmake.define.USE_FFTW=ON $(ls dist/*) --verbose
+          cd python
+          python -m pytest --memray tests/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: ./dist/*
+          # We do not need to keep the artifacts for long because they are
+          # supposed to be pushed to PyPI.
+          retention-days: 7
+
+  publish:
+    needs: [wheels, sdist]
+    name: Publish wheels to PyPI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          merge-multiple: true
+          path: ./wheelhouse/
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sdist
+          merge-multiple: true
+          path: ./wheelhouse/
+
+      - name: Publish wheels to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ./wheelhouse/
