@@ -205,16 +205,16 @@ jobs:
     - name: Install Python dependencies for tests
       run: pip install "segyio==${{ env.segyio_version }}" pytest pytest-memray xtgeo
 
-    - name: Build, test, and install (CMake)
+    - name: "Build, test, and install (CMake, target architecture: ${{ matrix.target_arch }})"
       env:
         CXXFLAGS: -march=${{ matrix.target_arch }}
       run: |
         mkdir build
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_PYTHON=ON \
-              -DCMAKE_INSTALL_PREFIX=/opt/si4ti \
-              -DUSE_FFTW=${{ matrix.fftw }} \
+              -DBUILD_PYTHON=OFF \
+              -DCMAKE_INSTALL_PREFIX=/opt/${{ matrix.target_arch }} \
+              -DUSE_FFTW=OFF \
               ..
         make -j
         ctest --output-on-failure
