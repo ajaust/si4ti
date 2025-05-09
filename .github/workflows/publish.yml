@@ -57,15 +57,12 @@ jobs:
       # to find OpenMP installed via Homebrew.
       #
       # [1]: https://cibuildwheel.pypa.io/en/stable/faq/#macos-library-dependencies-do-not-satisfy-target-macos
-      - name: Set MacOS deployment target
-        if: ${{ startsWith(matrix.os, 'macos') }}
-        run: |
-          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_target }}" >> $GITHUB_ENV
-          echo "OpenMP_ROOT=${{ matrix.openmp_root }}" >> $GITHUB_ENV
-
       - name: Build wheels
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_target }}
+            OpenMP_ROOT=${{ matrix.openmp_root }}
         run: |
           python -m cibuildwheel --output-dir wheelhouse python
 
