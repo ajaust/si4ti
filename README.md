@@ -78,9 +78,9 @@ pip install si4ti
 ```
 
 ### Build from source ###
-You can install si4ti via the source distribution (sdist) or the Git
-repository. This allows to compile the package with FFTW3 support as well as
-platform specific optimisation which may improve the performance.
+You can install si4ti from source via the the Git repository. This allows to
+compile the package with FFTW3 support as well as platform specific
+optimisation which may improve the performance.
 
 During compilation, you need the following dependencies.
  * A C++11 compatible compiler (tested on gcc and clang)
