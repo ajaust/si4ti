@@ -65,7 +65,7 @@ build = "*"
 # Don't build for PyPy, Win32, i686, and musllinux
 # Cannot build for linux_aarch64 due to missing xtgeo release
 skip = "pp* *-win32 *_i686 *musllinux* *_aarch64"
-test-requires = ["pytest", "pytest-memray"]
+test-extras = "test"
 test-command = "cd {project}/python && pytest --memray tests --color=yes -v"
 build-verbosity = 1
 
