@@ -1,5 +1,9 @@
 # si4ti changelog
 
+## 1.2.0 - 202X-XX-XX
+
+- Add support for Python 3.14
+
 ## 1.1.0 - 2025-06-26
 
 - Added Python bindings for the impedance calculation. Check the README for

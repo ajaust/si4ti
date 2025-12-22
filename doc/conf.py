@@ -24,9 +24,9 @@ copyright = '2018, Sveinung Styve Rundhovde and Jørgen Kvalsvik'
 author = 'Sveinung Styve Rundhovde and Jørgen Kvalsvik'
 
 # The short X.Y version
-version = '1.1'
+version = '1.2'
 # The full version, including alpha/beta/rc tags
-release = '1.1.0'
+release = '1.2.0'
 
 
 # -- General configuration ---------------------------------------------------
