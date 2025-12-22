@@ -69,7 +69,6 @@ Pre-built wheels are available for the following platforms for Python 3.10 up to
 
  * `manylinux_2_28` for `x86_64`
  * MacOS X 14.0 and newer for `arm64`
- * MacOS X 13.0 and newer for `x86_64`
 
 The pre-built wheels can be installed via `pip`
 
