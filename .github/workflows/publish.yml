@@ -1,4 +1,5 @@
 name: Wheels and command line tools
+permissions: {}
 
 env:
   segyio_version: '1.9.13'
