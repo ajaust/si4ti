@@ -108,7 +108,7 @@ jobs:
             cxx_flags: '-march=x86-64-v3'
           - os: macos-latest
             arch: arm64
-            macos_target: '14.0'
+            macos_target: '15.0'
             openmp_root: '/opt/homebrew/opt/libomp/'
             # There is no obvious compile-time optimisation that we can choose
             # here that is better than what the compiler chooses by default.
@@ -132,10 +132,10 @@ jobs:
       # different on arm64 than on x86_64, it is easiest to set them in the
       # workflow file.
       #
-      # The minimum supported MacOS version is set to 13.0 (amd64) and 14.0
-      # (arm64). OpenMP installed via Homebrew requires rather new MacOS
-      # versions [1]. If we want to support older platforms, we would need to
-      # build our own OpenMP library from source.
+      # The minimum supported MacOS version is set to 15.0 (arm64). OpenMP
+      # installed via Homebrew requires rather new MacOS versions [1]. If we
+      # want to support older platforms, we would need to build our own OpenMP
+      # library from source.
       #
       # On MacOS, we need to specify OpenMP_Root such that CMake is able
       # to find OpenMP installed via Homebrew.
