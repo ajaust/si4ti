@@ -65,7 +65,7 @@ build = "*"
 # Cannot build for linux_aarch64 due to missing xtgeo release
 # Don't build on Python 3.9 as it is almost end of life and we cannot test the
 # wheels on MacOS due to issues with h2py
-skip = "pp* *-win32 *_i686 *musllinux* *_aarch64 cp39-*"
+skip = "pp* *-win32 *_i686 *musllinux* *_aarch64 cp39-* cp314*"
 test-extras = "test"
 test-command = "cd {project}/python && pytest --memray tests --color=yes -v"
 build-verbosity = 1
