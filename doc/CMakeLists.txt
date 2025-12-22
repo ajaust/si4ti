@@ -1,4 +1,4 @@
-project(si4ti-doc)
+project(si4ti-doc LANGUAGES NONE)
 
 if(NOT BUILD_DOC)
     return()
@@ -20,6 +20,6 @@ add_custom_target(doc
         ${CMAKE_CURRENT_BINARY_DIR}/doc #output dir
     DEPENDS conf.py
             index.rst
-            theory.rst 
+            theory.rst
     COMMENT "Building documentation with sphinx"
 )
