@@ -2,7 +2,7 @@ name: Wheels and command line tools
 permissions: {}
 
 env:
-  segyio_version: '1.9.13'
+  segyio_version: '1.9.14'
   python_version: '3.11'
 
 on:
