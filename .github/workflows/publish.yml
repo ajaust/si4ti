@@ -107,7 +107,7 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             cxx_flags: '-march=x86-64-v3'
-          - os: macos-latest
+          - os: macos-15
             arch: arm64
             macos_target: '15.0'
             openmp_root: '/opt/homebrew/opt/libomp/'
