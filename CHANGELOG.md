@@ -1,5 +1,13 @@
 # si4ti changelog
 
+## 1.2.0 - 2026-08-11
+
+- Add support for Python 3.14.
+  - Python 3.14t (free-threaded Python) is not supported.
+  - Python 3.15 is not yet supported.
+- Support for macOS on Intel-based machines is dropped. Pre-built wheels
+  now require macOS 15.0 or newer (arm64 only).
+
 ## 1.1.0 - 2025-06-26
 
 - Added Python bindings for the impedance calculation. Check the README for
