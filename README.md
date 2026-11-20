@@ -129,6 +129,23 @@ platform specific optimisation. You can add relevant compiler flags either via
 the `CXXFLAGS` environment variable or the CMake parameter `CMAKE_CXX_FLAGS`
 (via `-Ccmake.define.CMAKE_CXX_FLAGS=<flags>`).
 
+#### Development with uv ####
+The development dependencies are locked in `python/uv.lock` and managed with
+[uv](https://docs.astral.sh/uv/). They are collected in the `dev` dependency
+group, which includes the test dependencies, `segyio`, `cibuildwheel`, and
+`pre-commit`. To build the bindings and install the development dependencies
+into a virtual environment, run the following from the `python/` directory
+
+```bash
+OpenMP_ROOT="/opt/homebrew/opt/libomp" uv sync --locked --no-editable --group dev -C cmake.define.USE_FFTW=ON
+```
+
+and run the tests with
+
+```bash
+uv run --no-sync pytest --memray tests
+```
+
 ### Usage ###
 The interface is inspired by the command line interface. Please check the
 Python help for details. You can find the Python help via

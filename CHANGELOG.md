@@ -1,5 +1,10 @@
 # si4ti changelog
 
+## Unreleased
+
+- Manage the development dependencies with uv. They are locked in
+  `python/uv.lock`.
+
 ## 1.2.0 - 2026-08-11
 
 - Add support for Python 3.14.
