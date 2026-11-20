@@ -29,7 +29,7 @@ jobs:
         dnf -y group install 'Development Tools'
         dnf -y install gcc-toolset-13 eigen3-devel cmake wget python${{ env.python_version }}
 
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
     # default. We use Boost 1.79.0 to reproduce the Travis build being used
@@ -118,7 +118,7 @@ jobs:
             eigen3_root: '/opt/homebrew/opt/eigen@3/'
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
