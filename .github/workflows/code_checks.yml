@@ -48,6 +48,12 @@ jobs:
     permissions: {}
     uses: ./.github/workflows/build_and_test.yml # zizmor: ignore[self-repository]
 
+  wheels:
+    name: Wheels and command line tools
+    needs: cppcheck
+    permissions: {}
+    uses: ./.github/workflows/build_wheels.yml # zizmor: ignore[self-repository]
+
   cppcheck:
     name: cppcheck
     runs-on: ubuntu-latest
