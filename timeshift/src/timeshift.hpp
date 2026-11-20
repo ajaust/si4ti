@@ -684,7 +684,7 @@ struct Si4tiPreconditioner {
         return v;
     }
 
-    Eigen::ComputationInfo info() { return Eigen::Success; }
+    Eigen::ComputationInfo info() const { return Eigen::Success; }
 
     const matrix< T >* mat = nullptr;
     int vintages = 0;
