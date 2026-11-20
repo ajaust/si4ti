@@ -97,3 +97,9 @@ before-all = [ "brew install --formula eigen@3 libomp cmake" ]
 exclude-newer = "7 days"
 # We trust the publishers of these packages, so they are exempt.
 exclude-newer-package = { xtgeo = false, segyio = false }
+
+[[tool.mypy.overrides]]
+# xtgeo does not ship type information and the extension module is not built
+# when mypy is run by pre-commit.
+module = ["xtgeo", "si4ti._si4ti_python"]
+ignore_missing_imports = true

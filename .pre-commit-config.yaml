@@ -34,8 +34,8 @@ repos:
     rev: v2.4.1
     hooks:
     - id: mypy
-      # Overwrite args to also warn on missing imports.
-      args: []
+      # Use the mypy configuration of the Python bindings.
+      args: ["--config-file=python/pyproject.toml"]
       # pre-commit runs mypy in an insulated environment where our dependencies
       # are not installed. Therefore, we install the dependencies needed for
       # type checking additionally.
