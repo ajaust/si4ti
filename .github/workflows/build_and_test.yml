@@ -1,10 +1,7 @@
 name: Build and Test
 permissions: {}
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 
 env:
@@ -19,7 +16,9 @@ jobs:
         fftw: ["ON", "OFF"]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Install dependencies
       run: |
@@ -46,15 +45,21 @@ jobs:
         make -j
         sudo make install
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         python-version: '${{ env.python_version }}'
-        cache: 'pip'
+        enable-cache: true
+        cache-dependency-glob: python/uv.lock
 
     # This installation of segyio is used within the tests run by `make diff`.
+    # The virtual environment is added to the PATH so that CMake finds its
+    # Python interpreter.
     - name: Install Python dependencies for tests
-      run: pip install "segyio==${{ env.segyio_version }}"
+      working-directory: python
+      run: |
+        uv sync --locked --no-install-project --group dev
+        echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
 
     - name: Build, test, and install (CMake)
       run: |
@@ -68,17 +73,15 @@ jobs:
         make diff
 
     - name: Build Python bindings
+      working-directory: python
       run: |
-        cd python
-        python -m pip install \
-          -Ccmake.define.CMAKE_BUILD_TYPE=Release \
-          -Ccmake.define.USE_FFTW=${{ matrix.fftw }} \
-          .[test] --verbose
+        uv sync --locked --no-editable --group dev \
+          -C cmake.define.CMAKE_BUILD_TYPE=Release \
+          -C cmake.define.USE_FFTW=${{ matrix.fftw }}
 
     - name: Test Python bindings
-      run: |
-        cd python
-        python -m pytest --memray tests/
+      working-directory: python
+      run: uv run --no-sync pytest --memray tests/
 
   # Compatibility with Red Hat Enterprise Linux 8
   build-almalinux-8:
@@ -98,7 +101,9 @@ jobs:
         dnf -y group install 'Development Tools'
         dnf -y install fftw3-devel gcc-toolset-13 eigen3-devel cmake wget python${{ env.python_version }} python${{ env.python_version }}-devel
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
     # default. We use Boost 1.79.0 to reproduce the Travis build being used
@@ -115,7 +120,7 @@ jobs:
         popd
         rm -rf boost_1_79_0
 
-    # segyio is installed from source in this step and using pip in following
+    # segyio is installed from source in this step and using uv in following
     # step. For the reasoning, check the comment in the job that runs the tests
     # on Ubuntu (see above).
     - name: Build and install segyio
@@ -136,14 +141,21 @@ jobs:
       run: |
           sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        enable-cache: true
+        cache-dependency-glob: python/uv.lock
+
+    # We use the Python interpreter provided by the distribution to test the
+    # compatibility with Red Hat Enterprise Linux 8, so uv must not download
+    # its own interpreter.
     - name: Install Python dependencies
+      working-directory: python
       run: |
-        python${{ env.python_version }} -m venv venv
-        source venv/bin/activate
-        python -m ensurepip --upgrade
-        python -m pip install --upgrade pip
-        python -m pip install segyio==${{ env.segyio_version }}
-        echo PATH=${PATH} >> $GITHUB_ENV
+        uv sync --locked --no-install-project --group dev \
+          --python python${{ env.python_version }} --no-python-downloads
+        echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
 
     - name: Build, test, and install (CMake)
       run: |
@@ -158,14 +170,13 @@ jobs:
         make install
 
     - name: Build Python bindings
+      working-directory: python
       run: |
-        cd python
-        source scl_source enable gcc-toolset-13 && python -m pip install \
-          -Ccmake.define.CMAKE_BUILD_TYPE=Release \
-          -Ccmake.define.USE_FFTW=${{ matrix.fftw }} \
-          .[test] --verbose
+        source scl_source enable gcc-toolset-13 && uv sync --locked --no-editable --group dev \
+          --python python${{ env.python_version }} --no-python-downloads \
+          -C cmake.define.CMAKE_BUILD_TYPE=Release \
+          -C cmake.define.USE_FFTW=${{ matrix.fftw }}
 
     - name: Test Python bindings
-      run: |
-        cd python
-        python -m pytest --memray tests/
+      working-directory: python
+      run: uv run --no-sync pytest --memray tests/

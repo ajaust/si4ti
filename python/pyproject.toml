@@ -47,6 +47,18 @@ test = [
   "pytest-memray",
 ]
 
+[dependency-groups]
+# Tools for developing si4ti and running the CI checks locally. Unlike the
+# optional dependencies, groups are not part of the published package.
+dev = [
+  "si4ti[test]",
+  # Needed to run the regression tests (`make diff`). Keep the version in
+  # sync with `segyio_version` in the GitHub workflows.
+  "segyio==1.9.14",
+  "cibuildwheel",
+  "pre-commit",
+]
+
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
 minimum-version = "build-system.requires"
@@ -79,3 +91,15 @@ before-all = "yum install -y make gcc gcc-c++ make eigen3-devel libomp-devel"
 
 [tool.cibuildwheel.macos]
 before-all = [ "brew install --formula eigen@3 libomp cmake" ]
+
+[tool.uv]
+# Only use releases that are at least seven days old.
+exclude-newer = "7 days"
+# We trust the publishers of these packages, so they are exempt.
+exclude-newer-package = { xtgeo = false, segyio = false }
+
+[[tool.mypy.overrides]]
+# xtgeo does not ship type information and the extension module is not built
+# when mypy is run by pre-commit.
+module = ["xtgeo", "si4ti._si4ti_python"]
+ignore_missing_imports = true

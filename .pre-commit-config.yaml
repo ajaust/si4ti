@@ -1,0 +1,82 @@
+exclude: 'test-data/.*|doc/.*|external/.*|cppcheck/.*|.*\.sgy|LICENSE|timeshift/diff\.py'
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v6.0.0"
+    hooks:
+      - id: check-added-large-files
+        # The lockfile is generated and exceeds the default size limit.
+        exclude: ^python/uv\.lock$
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
+      - id: trailing-whitespace
+  # Fast linting and format checking, see https://github.com/astral-sh/ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.17.5
+    hooks:
+    # Run the linter.
+    - id: ruff-check
+      types_or: [ python, pyi, jupyter ]
+      args: [ "--fix", "--show-fixes" ]
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi, jupyter ]
+  # Static typing for Python, see https://github.com/python/mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.4.1
+    hooks:
+    - id: mypy
+      # Use the mypy configuration of the Python bindings.
+      args: ["--config-file=python/pyproject.toml"]
+      # pre-commit runs mypy in an insulated environment where our dependencies
+      # are not installed. Therefore, we install the dependencies needed for
+      # type checking additionally.
+      additional_dependencies: [
+        numpy,
+        pytest,
+        segyio,
+        typing_extensions,
+        xtgeo,
+      ]
+      # We only want to check relevant for the Python bindings and not touch
+      # other Python scripts in other directories.
+      files: python/
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: "v2.4.3"
+    hooks:
+      - id: codespell
+        # ptd are getopt options, localL is a variable name, and nd is the
+        # name of a test parameter.
+        args: ["--ignore-words-list=ptd,locall,nd"]
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: "v23.1.5"
+    hooks:
+      - id: clang-format
+        types_or: [c++]
+        files: python/
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+    - id: gitleaks
+
+  # Static analysis and linting of the GitHub Actions workflows
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.32.0
+    hooks:
+    - id: zizmor
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+    - id: actionlint

@@ -1,186 +1,35 @@
-name: Wheels and command line tools
+name: Publish
 permissions: {}
-
-env:
-  segyio_version: '1.9.14'
-  python_version: '3.11'
 
 on:
   push:
-    branches: [main]
     tags:
       - '*'
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
 
 jobs:
-  build_executables:
-    name: Build CLI tools for Red Hat Enterprise Linux 8
-    runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
-    steps:
-    - name: Install dependencies
-      run: |
-        dnf -y update
-        dnf -y install dnf-plugins-core
-        dnf -y config-manager --set-enabled powertools
-        dnf -y group install 'Development Tools'
-        dnf -y install gcc-toolset-13 eigen3-devel cmake wget python${{ env.python_version }}
-
-    - uses: actions/checkout@v4
-
-    # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
-    # default. We use Boost 1.79.0 to reproduce the Travis build being used
-    # earlier for testing and releasing.
-    - name: Install Boost
-      run: |
-        wget https://archives.boost.io/release/1.79.0/source/boost_1_79_0.tar.gz
-        ls -l
-        tar xf boost_1_79_0.tar.gz
-        pushd boost_1_79_0
-        scl enable gcc-toolset-13 "./bootstrap.sh --with-libraries=math"
-        scl enable gcc-toolset-13 "./b2 -j 2"
-        scl enable gcc-toolset-13 "./b2 install"
-        popd
-        rm -rf boost_1_79_0
-
-    - name: Build and install segyio
-      run: |
-        git clone --branch v${{ env.segyio_version }} https://github.com/equinor/segyio.git
-        cd segyio
-        mkdir build
-        cd build
-        scl enable gcc-toolset-13 "cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_PYTHON=OFF -DEXPERIMENTAL=ON -DBUILD_TESTING=OFF -DBUILD_BIN=OFF"
-        scl enable gcc-toolset-13 "make -j"
-        scl enable gcc-toolset-13 "make install"
-
-    # We need to patch the segyio header to find some integer definitions on
-    # Fedora and Red Hat Enterprise Linux compatible distributions.
-    #
-    # TODO: Remove this step once a new segyio release fixes this issue.
-    - name: Patch segyio experimental header
-      run: |
-          sed -i 's/#include <cstring>/#include <cstdint>\n#include <cstring>/' /usr/local/include/segyio/segyio.hpp
-
-    - name: Install Python dependencies
-      run: |
-        python${{ env.python_version }} -m venv venv
-        source venv/bin/activate
-        python -m ensurepip --upgrade
-        python -m pip install --upgrade pip
-        python -m pip install "segyio==${{ env.segyio_version }}"
-        echo PATH=${PATH} >> $GITHUB_ENV
-
-    # Run build of command line tools from bash script to reuse the environment
-    # of the GitHub Action, so we do not have to reinstall and rebuild all
-    # dependencies.
-    #
-    # TODO: Consider replacing the script by reusable GitHub Actions, a
-    # composite Action or something similar to remove the need of another
-    # script added to the repository.
-    - name: Build, test, and install (CMake)
-      run: |
-        scl enable gcc-toolset-13 "./deploy/build_executables.sh"
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: si4ti-rhel8-executables
-        path: /opt/si4ti-rhel8-*
-        # We do not need to keep the artifacts for long because they are
-        # supposed to be uploaded to a new release in a timely manner. The
-        # upload has to be done manually.
-        retention-days: 7
-
-  wheels:
-    name: Build wheels on ${{ matrix.os }} ${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      # The main deployment target is (Red Hat) Linux. It is convenient to
-      # build the wheels for MacOS for testing and development. No wheels for
-      # windows are build as this was not straightforward to get working and
-      # there is no documented need for such wheels.
-      matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-            cxx_flags: '-march=x86-64-v3'
-          - os: macos-15
-            arch: arm64
-            macos_target: '15.0'
-            openmp_root: '/opt/homebrew/opt/libomp/'
-            # There is no obvious compile-time optimisation that we can choose
-            # here that is better than what the compiler chooses by default.
-            # Therefore, we don't specify anything for arm64.
-            cxx_flags:
-            eigen3_root: '/opt/homebrew/opt/eigen@3/'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # Used to host cibuildwheel
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-
-      # The majority of cibuildhweel configuration is done via pyproject.toml,
-      # but for options specific to a MacOS target platform, i.e., an option
-      # different on arm64 than on x86_64, it is easiest to set them in the
-      # workflow file.
-      #
-      # The minimum supported MacOS version is set to 15.0 (arm64). OpenMP
-      # installed via Homebrew requires rather new MacOS versions [1]. If we
-      # want to support older platforms, we would need to build our own OpenMP
-      # library from source.
-      #
-      # On MacOS, we need to specify OpenMP_Root such that CMake is able
-      # to find OpenMP installed via Homebrew.
-      #
-      # [1]: https://cibuildwheel.pypa.io/en/stable/faq/#macos-library-dependencies-do-not-satisfy-target-macos
-      - name: Build wheels
-        env:
-          CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_ENVIRONMENT_MACOS: >
-            MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_target }}
-            OpenMP_ROOT=${{ matrix.openmp_root }}
-            Eigen3_ROOT=${{ matrix.eigen3_root }}
-          CIBW_ENVIRONMENT: >
-            CXXFLAGS='${{ matrix.cxx_flags }}'
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse python
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheel-${{ matrix.os }}-${{ matrix.arch }}
-          path: ./wheelhouse/*.whl
-          # We do not need to keep the artifacts for long because they are
-          # supposed to be pushed to PyPI.
-          retention-days: 7
+  build:
+    name: Build wheels and command line tools
+    permissions: {}
+    uses: ./.github/workflows/build_wheels.yml  # zizmor: ignore[self-repository]
 
   publish:
     # We do not want to publish if either, building wheels or the command line
     # tools, fail because both should be in good shape for a release.
-    needs: [wheels, build_executables]
+    needs: build
     name: Publish wheels to PyPI
     runs-on: ubuntu-latest
     environment: pypi
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     permissions:
       id-token: write
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: wheel-*
           merge-multiple: true
           path: ./wheelhouse/
 
       - name: Publish wheels to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           packages-dir: ./wheelhouse/
