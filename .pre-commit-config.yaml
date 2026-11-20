@@ -54,6 +54,9 @@ repos:
     rev: "v2.4.3"
     hooks:
       - id: codespell
+        # ptd are getopt options, localL is a variable name, and nd is the
+        # name of a test parameter.
+        args: ["--ignore-words-list=ptd,locall,nd"]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: "v23.1.5"
