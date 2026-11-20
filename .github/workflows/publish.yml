@@ -30,6 +30,8 @@ jobs:
         dnf -y install gcc-toolset-13 eigen3-devel cmake wget python${{ env.python_version }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     # Boost 1.76 is required, but Red Hat 8 does only provide Boost 1.66 by
     # default. We use Boost 1.79.0 to reproduce the Travis build being used
@@ -125,14 +127,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Used to host cibuildwheel
       - name: Set up uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: '3.13'
-          enable-cache: true
-          cache-dependency-glob: python/uv.lock
+          # Do not cache anything in a workflow that publishes release
+          # artifacts.
+          enable-cache: false
 
       - name: Install cibuildwheel
         run: uv sync --project python --locked --no-install-project --group dev
