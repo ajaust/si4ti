@@ -115,7 +115,7 @@ jobs:
                  --error-exitcode=1 \
                  --suppressions-list=../cppcheck/suppressions.txt \
                  --verbose \
-                 --template="{file}:{line} [{severity}] {message}"
+                 --template="{file}:{line} [{severity}:{id}] {message}"
 
     - name: Configure project (Python bindings)
       working-directory: python
@@ -136,4 +136,4 @@ jobs:
                  --error-exitcode=1 \
                  --suppressions-list=../../cppcheck/suppressions.txt \
                  --verbose \
-                 --template="{file}:{line} [{severity}] {message}"
+                 --template="{file}:{line} [{severity}:{id}] {message}"
